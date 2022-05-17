@@ -1,0 +1,82 @@
+TweetController --- 
+ [HttpPost("addReply")]
+        public IActionResult AddReply(Reply reply)
+        {
+            if (!ModelState.IsValid)
+            {
+                return StatusCode(400);
+            }
+            else
+            {
+                var result = _tweetService.AddReply(reply);
+                if (result != null)
+                {
+                    _log4net.Info("Added Reply");
+                    _busControl.Send(Queue.Processing, reply);
+                    return Ok(result);
+                }
+                else
+                {
+                    _log4net.Info("Error Processing the Request");
+                    _busControl.Send(Queue.Processing, "Error Processing the Request");
+                    return BadRequest();
+                }
+            }
+        }
+
+
+Reply.cs
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace TweetAPI.Models
+{
+    public class Reply
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        [BsonIgnoreIfDefault]
+        public ObjectId ID { get; set; }
+
+        public int TweetID { get; set; }
+        public string LoginID { get; set; }
+        public DateTime DateTime { get; set; }
+        public string Content { get; set; } 
+    }
+}
+
+
+ITweetRepository
+public Reply AddReply(Reply reply);
+
+TweetRepository
+public Reply AddReply(Reply reply)
+        {
+            var result = _db.GetCollection<Reply>("TweetReplies").FindAll();
+            reply.DateTime = System.DateTime.Now;
+            _db.GetCollection<Reply>("TweeetReplies").Save(reply);
+            return reply;
+        }
+
+ITweetService
+public Reply AddReply(Reply reply);
+
+TweetService
+public Reply AddReply(Reply reply)
+        {
+            var result = _tweetRepo.AddReply(reply);
+            if(result != null)
+            {
+                _log4net.Info("Added Reply to the tweet");
+                return result;
+            }
+            else
+            {
+                _log4net.Error("Reply not Added");
+                return null;
+            }
+        }
